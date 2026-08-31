@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production build artifacts
+dist/
+build/
+public/assets/
+
+# Environment and secrets (RULE 1 & 2 COMPLIANCE)
+.env
+.env.*
+*.env
+!.env.example
+
+# Credentials, keys and certificates
+*.pem
+*.key
+id_rsa*
+*.pfx
+*.keystore
+credentials.json
+service-account*.json
+client_secrets*.json
+
+# Cloud & SSH configs
+.aws/
+.ssh/
+.gcloud/
+token.json
+
+# Local databases and persistent runtime data
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+*.sqlite
+*.sqlite3
+ntfy_data/
+
+# Multi-agent residual logs & workspaces
+.agents/
+
+# Logs and debug files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Editor & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

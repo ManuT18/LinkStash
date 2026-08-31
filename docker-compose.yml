@@ -1,0 +1,13 @@
+services:
+  linkstash:
+    build: .
+    container_name: linkstash
+    restart: unless-stopped
+    ports:
+      - "3500:3500"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
