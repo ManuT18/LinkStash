@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkStash — Flujo y Arquitectura de Componentes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f0f2f5;
+      --paper: #ffffff;
+      --paper-sub: #f8fafc;
+      --paper-card: #ffffff;
+      --ink: #1e293b;
+      --muted: #64748b;
+      --soft: #94a3b8;
+      --rule: rgba(30, 41, 59, 0.12);
+      --rule-solid: #cbd5e1;
+      --accent: #eb6c36;
+      --accent-tint: rgba(235, 108, 54, 0.08);
+      --link: #2563eb;
+      --zone-bg: rgba(30, 41, 59, 0.025);
+      --zone-border: rgba(30, 41, 59, 0.08);
+      --card-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.06);
+    }
+
+    [data-theme="dark"] {
+      --bg: #0b0f19;
+      --paper: #131b2e;
+      --paper-sub: #1a243d;
+      --paper-card: #182238;
+      --ink: #f8fafc;
+      --muted: #94a3b8;
+      --soft: #64748b;
+      --rule: rgba(248, 250, 252, 0.12);
+      --rule-solid: #334155;
+      --accent: #f08a59;
+      --accent-tint: rgba(240, 138, 89, 0.12);
+      --link: #60a5fa;
+      --zone-bg: rgba(248, 250, 252, 0.02);
+      --zone-border: rgba(248, 250, 252, 0.08);
+      --card-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+      transition: background 0.25s ease, color 0.25s ease;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    header {
+      background: var(--paper);
+      border-radius: 16px;
+      border: 1px solid var(--rule);
+      box-shadow: var(--card-shadow);
+      padding: 28px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .title-group h1 {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 2.3rem;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+
+    .title-group p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .tab-group, .theme-toggle {
+      display: flex;
+      background: var(--zone-bg);
+      border: 1px solid var(--rule);
+      border-radius: 9999px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .btn {
+      border: none;
+      background: transparent;
+      padding: 7px 16px;
+      border-radius: 9999px;
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn.active {
+      background: var(--paper);
+      color: var(--ink);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      font-weight: 600;
+    }
+
+    .diagram-card {
+      background: var(--paper);
+      border-radius: 16px;
+      border: 1px solid var(--rule);
+      box-shadow: var(--card-shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.25s ease;
+    }
+
+    .diagram-header {
+      padding: 20px 32px 16px;
+      border-bottom: 1px solid var(--rule);
+      background: var(--paper-sub);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .diagram-header h2 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+    }
+
+    .diagram-header span {
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--soft);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .canvas-wrapper {
+      padding: 24px;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+    }
+
+    svg {
+      width: 100%;
+      height: auto;
+      max-width: 1020px;
+      display: block;
+    }
+
+    footer {
+      padding: 16px 32px;
+      background: var(--paper-sub);
+      border-top: 1px solid var(--rule);
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-family: 'Geist Mono', monospace;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 16px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body data-theme="dark">
+
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <h1>LinkStash — Blueprint del Sistema</h1>
+        <p>Pipeline de procesamiento de mensajes & arquitectura de archivos y dependencias</p>
+      </div>
+      <div class="controls">
+        <div class="tab-group">
+          <button class="btn active" onclick="showDiagram('all')">Ver Todo</button>
+          <button class="btn" onclick="showDiagram('flow')">1. Flujo de Mensajes</button>
+          <button class="btn" onclick="showDiagram('arch')">2. Mapa de Archivos</button>
+        </div>
+        <div class="theme-toggle">
+          <button class="btn" id="light-btn" onclick="setTheme('light')">Light</button>
+          <button class="btn active" id="dark-btn" onclick="setTheme('dark')">Dark</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- DIAGRAMA 1: FLUJO PASO A PASO (PIPELINE)   -->
+    <!-- ========================================== -->
+    <div class="diagram-card" id="card-flow">
+      <div class="diagram-header">
+        <div>
+          <h2>1. Flujo del Mensaje & Pipeline de Enriquecimiento</h2>
+          <p style="font-size: 0.85rem; color: var(--muted); margin-top: 2px;">
+            Ciclo de vida completo desde que el usuario envía una URL hasta su almacenamiento e indexación en el dashboard.
+          </p>
+        </div>
+        <span>SECUENCIA OPERATIVA</span>
+      </div>
+
+      <div class="canvas-wrapper">
+        <svg viewBox="0 0 980 430" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr-muted" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--muted)" />
+            </marker>
+            <marker id="arr-accent" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--accent)" />
+            </marker>
+          </defs>
+
+          <!-- Zone Background Container -->
+          <rect x="20" y="20" width="940" height="380" rx="12" fill="var(--zone-bg)" stroke="var(--zone-border)" stroke-width="1"/>
+
+          <!-- ================= FLOW CONNECTORS ================= -->
+          <!-- Step 1 -> Step 2 -->
+          <path d="M 180,140 H 220" fill="none" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#arr-muted)"/>
+          <rect x="186" y="116" width="28" height="14" rx="2" fill="var(--paper)" stroke="var(--rule)" stroke-width="0.8"/>
+          <text x="200" y="126" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">URL</text>
+
+          <!-- Step 2 -> Step 3 -->
+          <path d="M 380,140 H 420" fill="none" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arr-accent)"/>
+          <rect x="386" y="116" width="28" height="14" rx="2" fill="var(--paper)" stroke="var(--rule)" stroke-width="0.8"/>
+          <text x="400" y="126" fill="var(--accent)" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">HTML</text>
+
+          <!-- Step 3 -> Step 4 (Down & Right) -->
+          <path d="M 500,200 V 240 Q 500,250 510,250 H 570 Q 580,250 580,260 V 270" fill="none" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arr-accent)"/>
+          <rect x="520" y="242" width="40" height="15" rx="2" fill="var(--paper)" stroke="var(--rule)" stroke-width="0.8"/>
+          <text x="540" y="253" fill="var(--accent)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600" text-anchor="middle">Meta</text>
+
+          <!-- Step 4 -> Step 5 -->
+          <path d="M 500,325 H 440" fill="none" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arr-accent)"/>
+          <rect x="456" y="317" width="30" height="15" rx="2" fill="var(--paper)" stroke="var(--rule)" stroke-width="0.8"/>
+          <text x="471" y="328" fill="var(--accent)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600" text-anchor="middle">Tags</text>
+
+          <!-- Step 5 -> Step 6 (Left & Down) -->
+          <path d="M 280,325 H 220" fill="none" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#arr-muted)"/>
+          <rect x="234" y="317" width="32" height="15" rx="2" fill="var(--paper)" stroke="var(--rule)" stroke-width="0.8"/>
+          <text x="250" y="328" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">SYNC</text>
+
+          <!-- Bot Ack Loop back to User (Dashed line) -->
+          <path d="M 300,80 V 55 Q 300,45 290,45 H 120 Q 110,45 110,55 V 80" fill="none" stroke="var(--soft)" stroke-dasharray="4,3" stroke-width="1.2" marker-end="url(#arr-muted)"/>
+          <rect x="165" y="38" width="80" height="14" rx="2" fill="var(--paper)" stroke="var(--rule)" stroke-width="0.8"/>
+          <text x="205" y="48" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">⏳ Acuse inmediato</text>
+
+          <!-- ================= FLOW NODES ================= -->
+
+          <!-- Step 1: User / Ingress -->
+          <g transform="translate(40, 80)">
+            <rect width="140" height="120" rx="8" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <circle cx="24" cy="24" r="9" fill="var(--zone-bg)" stroke="var(--soft)" stroke-width="1"/>
+            <text x="24" y="27" fill="var(--ink)" font-size="9" font-family="'Geist Mono', monospace" font-weight="600" text-anchor="middle">1</text>
+            <text x="42" y="27" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace" font-weight="600">ORIGEN</text>
+            <text x="16" y="52" fill="var(--ink)" font-size="12" font-family="'Geist', sans-serif" font-weight="600">Usuario Telegram</text>
+            <text x="16" y="70" fill="var(--muted)" font-size="9" font-family="'Geist', sans-serif">Pega o comparte URL en el chat del bot</text>
+            <text x="16" y="96" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace">https://ejemplo.com</text>
+          </g>
+
+          <!-- Step 2: Bot Handler & Validation -->
+          <g transform="translate(220, 80)">
+            <rect width="160" height="120" rx="8" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <circle cx="24" cy="24" r="9" fill="var(--zone-bg)" stroke="var(--soft)" stroke-width="1"/>
+            <text x="24" y="27" fill="var(--ink)" font-size="9" font-family="'Geist Mono', monospace" font-weight="600" text-anchor="middle">2</text>
+            <text x="42" y="27" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace" font-weight="600">RECEPCIÓN</text>
+            <text x="16" y="52" fill="var(--ink)" font-size="12" font-family="'Geist', sans-serif" font-weight="600">bot/handlers.ts</text>
+            <text x="16" y="70" fill="var(--muted)" font-size="9" font-family="'Geist', sans-serif">Valida URL, emite acuse de recibo y llama al pipeline</text>
+            <text x="16" y="96" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace">regex match + state</text>
+          </g>
+
+          <!-- Step 3: Scraper & Metadata Extraction (Focal Step A) -->
+          <g transform="translate(420, 80)">
+            <rect width="160" height="120" rx="8" fill="var(--accent-tint)" stroke="var(--accent)" stroke-width="1.3"/>
+            <circle cx="24" cy="24" r="9" fill="var(--accent)" />
+            <text x="24" y="27" fill="#ffffff" font-size="9" font-family="'Geist Mono', monospace" font-weight="700" text-anchor="middle">3</text>
+            <text x="42" y="27" fill="var(--accent)" font-size="8" font-family="'Geist Mono', monospace" font-weight="700">EXTRACCIÓN</text>
+            <text x="16" y="52" fill="var(--ink)" font-size="12" font-family="'Geist', sans-serif" font-weight="600">services/metadata.ts</text>
+            <text x="16" y="70" fill="var(--muted)" font-size="9" font-family="'Geist', sans-serif">Scraping HTTP de OpenGraph (title, desc, image, favicon)</text>
+            <text x="16" y="96" fill="var(--accent)" font-size="8" font-family="'Geist Mono', monospace">cheerio + fetch</text>
+          </g>
+
+          <!-- Step 4: AI & Categorizer (Focal Step B) -->
+          <g transform="translate(500, 265)">
+            <rect width="160" height="120" rx="8" fill="var(--accent-tint)" stroke="var(--accent)" stroke-width="1.3"/>
+            <circle cx="24" cy="24" r="9" fill="var(--accent)" />
+            <text x="24" y="27" fill="#ffffff" font-size="9" font-family="'Geist Mono', monospace" font-weight="700" text-anchor="middle">4</text>
+            <text x="42" y="27" fill="var(--accent)" font-size="8" font-family="'Geist Mono', monospace" font-weight="700">CLASIFICACIÓN</text>
+            <text x="16" y="52" fill="var(--ink)" font-size="12" font-family="'Geist', sans-serif" font-weight="600">services/categorizer.ts</text>
+            <text x="16" y="70" fill="var(--muted)" font-size="9" font-family="'Geist', sans-serif">Inferencia de tags y categoría cruzando keywords y reglas</text>
+            <text x="16" y="96" fill="var(--accent)" font-size="8" font-family="'Geist Mono', monospace">AI / keyword rules</text>
+          </g>
+
+          <!-- Step 5: Database Persistence -->
+          <g transform="translate(280, 265)">
+            <rect width="160" height="120" rx="8" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <circle cx="24" cy="24" r="9" fill="var(--zone-bg)" stroke="var(--soft)" stroke-width="1"/>
+            <text x="24" y="27" fill="var(--ink)" font-size="9" font-family="'Geist Mono', monospace" font-weight="600" text-anchor="middle">5</text>
+            <text x="42" y="27" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace" font-weight="600">PERSISTENCIA</text>
+            <text x="16" y="52" fill="var(--ink)" font-size="12" font-family="'Geist', sans-serif" font-weight="600">db/queries.ts</text>
+            <text x="16" y="70" fill="var(--muted)" font-size="9" font-family="'Geist', sans-serif">Guarda en SQLite con estado 'unread' / 'pending'</text>
+            <text x="16" y="96" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace">data/linkstash.db</text>
+          </g>
+
+          <!-- Step 6: Confirmation & Web Live Sync -->
+          <g transform="translate(60, 265)">
+            <rect width="160" height="120" rx="8" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <circle cx="24" cy="24" r="9" fill="var(--zone-bg)" stroke="var(--soft)" stroke-width="1"/>
+            <text x="24" y="27" fill="var(--ink)" font-size="9" font-family="'Geist Mono', monospace" font-weight="600" text-anchor="middle">6</text>
+            <text x="42" y="27" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace" font-weight="600">CONSUMO</text>
+            <text x="16" y="52" fill="var(--ink)" font-size="12" font-family="'Geist', sans-serif" font-weight="600">Bot + Web SPA</text>
+            <text x="16" y="70" fill="var(--muted)" font-size="9" font-family="'Geist', sans-serif">Bot confirma con tarjeta rica y la SPA actualiza el feed</text>
+            <text x="16" y="96" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace">Feed & Filtros listos</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- DIAGRAMA 2: MAPA DE COMPONENTES & ARCHIVOS -->
+    <!-- ========================================== -->
+    <div class="diagram-card" id="card-arch">
+      <div class="diagram-header">
+        <div>
+          <h2>2. Arquitectura de Archivos, Componentes y Relaciones</h2>
+          <p style="font-size: 0.85rem; color: var(--muted); margin-top: 2px;">
+            Mapeo estructural del código en TypeScript, submódulos, controladores y su vinculación con la base de datos y la SPA.
+          </p>
+        </div>
+        <span>MAPA DE DEPENDENCIAS</span>
+      </div>
+
+      <div class="canvas-wrapper">
+        <svg viewBox="0 0 1020 540" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="m2" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--muted)" />
+            </marker>
+            <marker id="m2-acc" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--accent)" />
+            </marker>
+          </defs>
+
+          <!-- ================= ZONES ================= -->
+          <!-- ZONE A: Ingress / Bot & Entrypoint -->
+          <rect x="20" y="20" width="220" height="500" rx="10" fill="var(--zone-bg)" stroke="var(--zone-border)" stroke-width="1"/>
+          <rect x="32" y="14" width="125" height="14" rx="2" fill="var(--paper)"/>
+          <text x="94" y="24" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace" font-weight="600" text-anchor="middle" letter-spacing="0.1em">INGRESS & BOT</text>
+
+          <!-- ZONE B: Services & Intelligence (FOCAL ZONE) -->
+          <rect x="260" y="20" width="240" height="500" rx="10" fill="var(--zone-bg)" stroke="var(--zone-border)" stroke-width="1"/>
+          <rect x="272" y="14" width="135" height="14" rx="2" fill="var(--paper)"/>
+          <text x="339" y="24" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace" font-weight="600" text-anchor="middle" letter-spacing="0.1em">SERVICES & CORE</text>
+
+          <!-- ZONE C: API & Persistence -->
+          <rect x="520" y="20" width="230" height="500" rx="10" fill="var(--zone-bg)" stroke="var(--zone-border)" stroke-width="1"/>
+          <rect x="532" y="14" width="130" height="14" rx="2" fill="var(--paper)"/>
+          <text x="597" y="24" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace" font-weight="600" text-anchor="middle" letter-spacing="0.1em">API & DATABASE</text>
+
+          <!-- ZONE D: Frontend SPA -->
+          <rect x="770" y="20" width="230" height="500" rx="10" fill="var(--zone-bg)" stroke="var(--zone-border)" stroke-width="1"/>
+          <rect x="782" y="14" width="125" height="14" rx="2" fill="var(--paper)"/>
+          <text x="844" y="24" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace" font-weight="600" text-anchor="middle" letter-spacing="0.1em">REACT 19 SPA</text>
+
+
+          <!-- ================= CONNECTORS ================= -->
+          <!-- src/index.ts -> bot.ts -->
+          <path d="M 130,95 V 130" fill="none" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#m2)"/>
+          <!-- src/index.ts -> api/server.ts (Right & Down) -->
+          <path d="M 215,65 H 580 Q 590,65 590,75 V 130" fill="none" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#m2)"/>
+          
+          <!-- bot.ts -> handlers.ts & commands.ts -->
+          <path d="M 130,195 V 230" fill="none" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#m2)"/>
+          <path d="M 130,320 V 355" fill="none" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#m2)"/>
+
+          <!-- handlers.ts -> services (metadata.ts & categorizer.ts) -->
+          <path d="M 215,275 H 280" fill="none" stroke="var(--accent)" stroke-width="1.4" marker-end="url(#m2-acc)"/>
+          
+          <!-- metadata.ts -> categorizer.ts -->
+          <path d="M 380,205 V 240" fill="none" stroke="var(--accent)" stroke-width="1.4" marker-end="url(#m2-acc)"/>
+
+          <!-- categorizer.ts -> db/queries.ts (Right & Down) -->
+          <path d="M 480,310 H 505 Q 515,310 515,320 V 375 Q 515,385 525,385 H 540" fill="none" stroke="var(--accent)" stroke-width="1.4" marker-end="url(#m2-acc)"/>
+
+          <!-- api/server.ts -> api/routes.ts -->
+          <path d="M 635,195 V 230" fill="none" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#m2)"/>
+
+          <!-- api/routes.ts -> db/queries.ts -->
+          <path d="M 635,320 V 355" fill="none" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#m2)"/>
+
+          <!-- db/queries.ts -> db/database.ts -->
+          <path d="M 635,420 V 445" fill="none" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#m2)"/>
+
+          <!-- Frontend services/api.ts -> Backend api/routes.ts (Left across zones) -->
+          <path d="M 790,275 H 730" fill="none" stroke="var(--link)" stroke-width="1.3" marker-end="url(#m2)"/>
+          <rect x="740" y="267" width="40" height="15" rx="2" fill="var(--paper)" stroke="var(--rule)" stroke-width="0.8"/>
+          <text x="760" y="278" fill="var(--link)" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">fetch()</text>
+
+          <!-- Frontend App.tsx -> components -->
+          <path d="M 885,195 V 230" fill="none" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#m2)"/>
+          <!-- Frontend components -> services/api.ts -->
+          <path d="M 885,340 V 365" fill="none" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#m2)"/>
+
+
+          <!-- ================= NODES ================= -->
+
+          <!-- Entrypoint: src/index.ts -->
+          <g transform="translate(45, 40)">
+            <rect width="170" height="55" rx="6" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">ENTRYPOINT</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="600">src/index.ts</text>
+            <text x="12" y="48" fill="var(--muted)" font-size="8" font-family="'Geist Mono', monospace">Boot Bot + API</text>
+          </g>
+
+          <!-- Bot Instance: src/bot/bot.ts -->
+          <g transform="translate(45, 130)">
+            <rect width="170" height="65" rx="6" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">BOT INSTANCE</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="600">src/bot/bot.ts</text>
+            <text x="12" y="52" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">Inicialización Telegraf</text>
+          </g>
+
+          <!-- Bot Handlers: src/bot/handlers.ts -->
+          <g transform="translate(45, 230)">
+            <rect width="170" height="90" rx="6" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">MESSAGE HANDLERS</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="600">src/bot/handlers.ts</text>
+            <text x="12" y="54" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">Detección y scraping</text>
+            <text x="12" y="68" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">Envío de confirmaciones</text>
+            <text x="12" y="82" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace">onText(/http.../)</text>
+          </g>
+
+          <!-- Bot Commands: src/bot/commands.ts -->
+          <g transform="translate(45, 355)">
+            <rect width="170" height="60" rx="6" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">COMMANDS</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="600">src/bot/commands.ts</text>
+            <text x="12" y="50" fill="var(--muted)" font-size="8" font-family="'Geist Mono', monospace">/start /stats /categories</text>
+          </g>
+
+          <!-- Metadata Scraper: src/services/metadata.ts -->
+          <g transform="translate(280, 115)">
+            <rect width="200" height="90" rx="6" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">METADATA SCRAPER</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="600">src/services/metadata.ts</text>
+            <text x="12" y="54" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">Extracción HTML & OpenGraph</text>
+            <text x="12" y="68" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">Resolución de favicon e imágenes</text>
+            <text x="12" y="82" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace">extractMetadata(url)</text>
+          </g>
+
+          <!-- AI Categorizer: src/services/categorizer.ts (Focal Accent Node) -->
+          <g transform="translate(280, 240)">
+            <rect width="200" height="105" rx="6" fill="var(--accent-tint)" stroke="var(--accent)" stroke-width="1.3"/>
+            <text x="12" y="20" fill="var(--accent)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="700">★ AI CLASSIFIER</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="700">src/services/categorizer.ts</text>
+            <text x="12" y="54" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">Asignación automática de categoría</text>
+            <text x="12" y="68" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">Inferencia de tags y relevancia</text>
+            <text x="12" y="82" fill="var(--accent)" font-size="8" font-family="'Geist Mono', monospace" font-weight="600">categorizeLink(meta, text)</text>
+          </g>
+
+          <!-- Schedulers & Notifiers -->
+          <g transform="translate(280, 380)">
+            <rect width="200" height="75" rx="6" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">BACKGROUND TASKS</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="600">scheduler.ts / notifier.ts</text>
+            <text x="12" y="54" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">Reportes periódicos & alertas</text>
+            <text x="12" y="68" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace">cron jobs / triggers</text>
+          </g>
+
+          <!-- API Server: src/api/server.ts -->
+          <g transform="translate(540, 130)">
+            <rect width="190" height="65" rx="6" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">EXPRESS APP</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="600">src/api/server.ts</text>
+            <text x="12" y="52" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">Configuración CORS & Static</text>
+          </g>
+
+          <!-- API Router: src/api/routes.ts -->
+          <g transform="translate(540, 230)">
+            <rect width="190" height="90" rx="6" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">REST ROUTER</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="600">src/api/routes.ts</text>
+            <text x="12" y="54" fill="var(--muted)" font-size="8.5" font-family="'Geist Mono', monospace">GET/POST /api/links</text>
+            <text x="12" y="68" fill="var(--muted)" font-size="8.5" font-family="'Geist Mono', monospace">GET/PUT  /api/categories</text>
+            <text x="12" y="82" fill="var(--muted)" font-size="8.5" font-family="'Geist Mono', monospace">GET      /api/stats</text>
+          </g>
+
+          <!-- Database Queries: src/db/queries.ts -->
+          <g transform="translate(540, 355)">
+            <rect width="190" height="65" rx="6" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">SQL ENGINE</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="600">src/db/queries.ts</text>
+            <text x="12" y="52" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">CRUD de links y categorías</text>
+          </g>
+
+          <!-- SQLite File: data/linkstash.db -->
+          <g transform="translate(540, 445)">
+            <rect width="190" height="50" rx="6" fill="var(--paper-sub)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">STORAGE</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11" font-family="'Geist Mono', monospace" font-weight="600">data/linkstash.db</text>
+          </g>
+
+          <!-- Frontend Shell: src/frontend/App.tsx -->
+          <g transform="translate(790, 130)">
+            <rect width="190" height="65" rx="6" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">REACT SHELL</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="600">src/frontend/App.tsx</text>
+            <text x="12" y="52" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">Vite · Router · Glassmorphism</text>
+          </g>
+
+          <!-- Frontend Components -->
+          <g transform="translate(790, 230)">
+            <rect width="190" height="110" rx="6" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">UI COMPONENTS</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="600">components/*</text>
+            <text x="12" y="54" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">• LinkCard & AddLinkModal</text>
+            <text x="12" y="68" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">• FilterBar & Sidebar</text>
+            <text x="12" y="82" fill="var(--muted)" font-size="8.5" font-family="'Geist', sans-serif">• CategoryManagerModal</text>
+            <text x="12" y="96" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace">Framer Motion animations</text>
+          </g>
+
+          <!-- Frontend API Service -->
+          <g transform="translate(790, 365)">
+            <rect width="190" height="60" rx="6" fill="var(--paper)" stroke="var(--rule-solid)" stroke-width="1"/>
+            <text x="12" y="20" fill="var(--soft)" font-size="7.5" font-family="'Geist Mono', monospace" font-weight="600">API CLIENT</text>
+            <text x="12" y="38" fill="var(--ink)" font-size="11.5" font-family="'Geist', sans-serif" font-weight="600">services/api.ts</text>
+            <text x="12" y="50" fill="var(--soft)" font-size="8" font-family="'Geist Mono', monospace">fetch(/api/links...)</text>
+          </g>
+
+        </svg>
+      </div>
+    </div>
+
+    <footer>
+      <div>
+        <span class="legend-item"><span class="legend-dot" style="background: var(--accent);"></span> Módulos clave e inferencia IA</span>
+        <span class="legend-item"><span class="legend-dot" style="background: var(--link);"></span> Llamadas API cliente/servidor</span>
+        <span class="legend-item"><span class="legend-dot" style="background: var(--muted);"></span> Conexiones internas</span>
+      </div>
+      <div>
+        <span>Formato: HTML + SVG puro (diagram-design)</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    function setTheme(theme) {
+      document.body.setAttribute('data-theme', theme);
+      document.getElementById('light-btn').classList.toggle('active', theme === 'light');
+      document.getElementById('dark-btn').classList.toggle('active', theme === 'dark');
+    }
+
+    function showDiagram(mode) {
+      const flowCard = document.getElementById('card-flow');
+      const archCard = document.getElementById('card-arch');
+      
+      document.querySelectorAll('.tab-group .btn').forEach((btn, idx) => {
+        btn.classList.remove('active');
+        if ((mode === 'all' && idx === 0) || (mode === 'flow' && idx === 1) || (mode === 'arch' && idx === 2)) {
+          btn.classList.add('active');
+        }
+      });
+
+      if (mode === 'all') {
+        flowCard.style.display = 'flex';
+        archCard.style.display = 'flex';
+      } else if (mode === 'flow') {
+        flowCard.style.display = 'flex';
+        archCard.style.display = 'none';
+      } else if (mode === 'arch') {
+        flowCard.style.display = 'none';
+        archCard.style.display = 'flex';
+      }
+    }
+  </script>
+</body>
+</html>
